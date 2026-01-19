@@ -7,7 +7,7 @@ namespace PEE {
 
 			auto& trampoline = SKSE::GetTrampoline();
 
-			REL::Relocation<std::uintptr_t> _playerUsePotion{ REL::RelocationID(0, 40690), REL::VariantOffset(0x0, 0x15, 0x0) };
+			REL::Relocation<std::uintptr_t> _playerUsePotion{ REL::RelocationID(39604, 40690, 0x6d7b00), REL::VariantOffset(0x15, 0x15, 0x15) };
 			_originalCall = trampoline.write_call<5>(_playerUsePotion.address(), &PlayerUsePotion);
 			logger::info("Potion Use Hook complete...");
 		}
