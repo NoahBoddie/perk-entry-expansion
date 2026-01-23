@@ -1,0 +1,14 @@
+1D6660 is the address I need in order to be able to handle modify price.
+Note there are some uses other than where it will load prices, but these prices are only used for skill advancing 
+ rather than actually calculating price.
+
+ Correction, 1D66E0 is the price handling function I think. 890E70+1F1 specifically
+
+2F4BED4 is the ref handle for the actor in question for the thing. The inventory can be searched via the data handler.
+ And the player is around obviously
+
+ Use this to get who the owner is. I'll be a little jank, use some threads ids to make it safe
+ 8527B0+66
+
+
+ 171590+149 will have to be used to get the accurate chest used for the barter menu. nvm, I can get it from the spot.

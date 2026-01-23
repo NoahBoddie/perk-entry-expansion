@@ -1,14 +1,17 @@
 #pragma once
 
-#include "SpeechCheck/Hooks.hpp"
-
+//#include "SpeechCheck/Hooks.hpp"
+#include"Multishot/Hooks.hpp"
+#include"ModifyPrice/Hooks.hpp"
 
 namespace PEE
 {
 	inline static void Install()
 	{
-		//Set allocator here
+		SKSE::AllocTrampoline(Allocator::GetAlloc());
 
-		SPCK::Install();
+		MULT::Install();
+		MPRC::Install();
+
 	}
 }

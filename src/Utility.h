@@ -196,6 +196,20 @@ namespace PEE
 		return func();
 	}
 
+	constexpr float pi = std::numbers::pi_v<float>;
+
+
+	constexpr float RadToDeg(float rad) noexcept
+	{
+		return (180.f / pi) * rad;
+
+	}
+
+	constexpr float DegToRad(float deg) noexcept
+	{
+		return (pi / 180.f) * deg;
+	}
+
 #ifdef NDEBUG
 
 #define PROFILE(mc_expr) mc_expr

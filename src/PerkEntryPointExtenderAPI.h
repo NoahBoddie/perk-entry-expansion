@@ -21,7 +21,7 @@ namespace PEPE
 		NoActor,		//No perk owner
 		InvalidActor,	//Perk entry invalid on target
 		InvalidOut,		//Doesn't have an out when it should
-		
+		UnknownFlags,	//Unrecognized flags used
 		
 		
 		
@@ -34,8 +34,18 @@ namespace PEPE
 		enum Enum : uint64_t
 		{
 			None = 0,
-			ReverseOrder = 1 << 0,
-			PRIVATE_UsesCollection = 1 << 1,
+			ReverseOrder = 1 << 0,				//Reverses the priority of the perk entries being read in
+			PRIVATE_UsesCollection = 1 << 1,	//PRIVATE: used to designate the form collection struct being used NOT to say that the out is a vector.
+			
+			Paired = 1 << 2,					//Use means the argument count is doubled, with the lower count coresponding with the upper count. 
+												// use pairs to enable automatically
+			
+			
+			
+			
+			PRIVATE_Last,	//Does nothing but helps see what last unused flag is.
+			PRIVATE_Total = (PRIVATE_Last - 1) << 1,//Flags after or equal to this will be seen as invalid
+		
 		};
 	};
 
@@ -267,34 +277,89 @@ namespace RE
 		}
 	}
 
+	namespace detail
+	{
+		template <typename U>
+		using unit = std::pair<U, U>;
+
+		//Not to be directly used, a function that has all the parameters so I don't accidentally use a different set.
+		template <class O, std::derived_from<RE::TESForm>... Args>
+		inline static PEPE::RequestResult HandleEntryPoint_Unpaired(RE::PerkEntryPoint a_entryPoint, RE::Actor* a_perkOwner, PEPE::EntryPointFlag flags, O& out,
+			const std::string_view& category, uint8_t channel, Args*... a_args)
+		{
+			return ::RE::HandleEntryPoint(a_entryPoint, a_perkOwner, flags, out, category, channel, a_args...);
+		}
+
+	
+		template <class O, std::derived_from<RE::TESForm>... Args1, std::derived_from<RE::TESForm>... Args2>
+		inline static PEPE::RequestResult HandleEntryPoint_Paired(RE::PerkEntryPoint a_entryPoint, RE::Actor* a_perkOwner, PEPE::EntryPointFlag flags, O& out,
+			const std::string_view& category, uint8_t channel, std::pair<Args1*, Args2*>... a_args)
+		{
+			flags = (PEPE::EntryPointFlag)(flags | PEPE::EntryPointFlag::Paired);
+
+			return ::RE::HandleEntryPoint(a_entryPoint, a_perkOwner, flags, out, category, channel, (a_args.first, ...), (a_args.second, ...));
+		}
+	}
+
+	//With Flags/Category
 	template <class O, std::derived_from<RE::TESForm>... Args>
 	inline static PEPE::RequestResult HandleEntryPoint(RE::PerkEntryPoint a_entryPoint, RE::Actor* a_perkOwner, PEPE::EntryPointFlag flags, O& out, const std::string_view& category, Args*... a_args)
 	{
-		return HandleEntryPoint(a_entryPoint, a_perkOwner, flags, out, category, 255, a_args...);
+		return HandleEntryPoint_Unpaired(a_entryPoint, a_perkOwner, flags, out, category, 255, a_args...);
 	}
 
+	//With Category
 	template <class O, std::derived_from<RE::TESForm>... Args>
 	inline static PEPE::RequestResult HandleEntryPoint(RE::PerkEntryPoint a_entryPoint, RE::Actor* a_perkOwner, O& out, const std::string_view& category, Args*... a_args)
 	{
-		return HandleEntryPoint(a_entryPoint, a_perkOwner, PEPE::EntryPointFlag::None, out, category, 255, a_args...);
+		return HandleEntryPoint_Unpaired(a_entryPoint, a_perkOwner, PEPE::EntryPointFlag::None, out, category, 255, a_args...);
 	}
 
 
-	//no cat nor cha
+	//With Flags
 	template <class O, std::derived_from<RE::TESForm>... Args>
 	inline static PEPE::RequestResult HandleEntryPoint(RE::PerkEntryPoint a_entryPoint, RE::Actor* a_perkOwner, PEPE::EntryPointFlag flags, O& out, Args*... a_args)
 	{
-		return HandleEntryPoint(a_entryPoint, a_perkOwner, flags, out, "", 0, a_args...);
+		return HandleEntryPoint_Unpaired(a_entryPoint, a_perkOwner, flags, out, "", 0, a_args...);
 	}
-
+	//Regular
 	template <class O, std::derived_from<RE::TESForm>... Args>
 	inline static PEPE::RequestResult HandleEntryPoint(RE::PerkEntryPoint a_entryPoint, RE::Actor* a_perkOwner, O& out, Args*... a_args)
 	{
-		return HandleEntryPoint(a_entryPoint, a_perkOwner, out, "", 0, a_args...);
+		return HandleEntryPoint_Unpaired(a_entryPoint, a_perkOwner, PEPE::EntryPointFlag::None, out, "", 0, a_args...);
 	}
 
-	//cat only
 	
+	
+
+	//With Flags/Category, Paired
+	template <class O, std::derived_from<RE::TESForm>... Args1, std::derived_from<RE::TESForm>... Args2>
+	inline static PEPE::RequestResult HandleEntryPoint(RE::PerkEntryPoint a_entryPoint, RE::Actor* a_perkOwner, PEPE::EntryPointFlag flags, O& out, const std::string_view& category, std::pair<Args1*, Args2*>... a_args)
+	{
+		return HandleEntryPoint_Paired(a_entryPoint, a_perkOwner, flags, out, category, 255, a_args...);
+	}
+
+	//With Category, Paried
+	template <class O, std::derived_from<RE::TESForm>... Args1, std::derived_from<RE::TESForm>... Args2>
+	inline static PEPE::RequestResult HandleEntryPoint(RE::PerkEntryPoint a_entryPoint, RE::Actor* a_perkOwner, O& out, const std::string_view& category, std::pair<Args1*, Args2*>... a_args)
+	{
+		return HandleEntryPoint_Paired(a_entryPoint, a_perkOwner, PEPE::EntryPointFlag::None, out, category, 255, a_args...);
+	}
+
+
+	//With Flags, Paired
+	template <class O, std::derived_from<RE::TESForm>... Args1, std::derived_from<RE::TESForm>... Args2>
+	inline static PEPE::RequestResult HandleEntryPoint(RE::PerkEntryPoint a_entryPoint, RE::Actor* a_perkOwner, PEPE::EntryPointFlag flags, O& out, std::pair<Args1*, Args2*>... a_args)
+	{
+		return HandleEntryPoint_Paired(a_entryPoint, a_perkOwner, flags, out, "", 0, a_args...);
+	}
+
+	//Regular, Paired
+	template <class O, std::derived_from<RE::TESForm>... Args1, std::derived_from<RE::TESForm>... Args2>
+	inline static PEPE::RequestResult HandleEntryPoint(RE::PerkEntryPoint a_entryPoint, RE::Actor* a_perkOwner, O& out, std::pair<Args1*, Args2*>... a_args)
+	{
+		return HandleEntryPoint_Paired(a_entryPoint, a_perkOwner, PEPE::EntryPointFlag::None, out, "", 0, a_args...);
+	}
 
 
 }
