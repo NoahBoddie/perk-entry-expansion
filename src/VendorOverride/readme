@@ -1,0 +1,25 @@
+8538A0+61 for SE is where these checks are handled. Follow what they assign to to see if we could handle this
+
+Seems like it's stored in some kind of struct. I have no idea how deep it goes. But it seems to be
+
+reference
+bool 0x08 0 if player, 1 if merchant
+bool BypassStolen
+bool BypassKeyword
+
+855B60 seems to be the function to pick at.
+5DA730 specifically, if it's not inlined that is. 855B60+4F is the spot.
+It's around the reset vendor chest reset, so bare that in mind.
+
+VendorOverride is the keyword, VendorOverrideStolen and VendorOverrideType are specific branches to address one specific
+ or the other. Only activates when not normally allowed.
+
+
+ AE:892B00+21C will have to be used as an AE exclusive hook
+ //Scratch, 892B00+277 might work just as well. It'll go through an extra bit but no harm I say.
+
+
+ Accounting for ownership will be thus, the first arg, merchant chest as target, merchant as subject.
+ Second arg, the owner as first argument, nothing as the second. (this can make it so you can sell things if stolen from a particular faction or person).
+ To swing the latter, I'll need to be able to make an actor standin as well, to run on factions.
+

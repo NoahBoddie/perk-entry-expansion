@@ -10,14 +10,13 @@ namespace PEE::MPRC
 
 		static void Install()
 		{
-			//SE: 8527B0, 1.6.640: ???
-			auto address = REL::Relocation<uintptr_t>{ REL::RelocationID(50005, 0) }.address();
-
+			//SE: 8527B0, 1.6.640: 8916B0
+			auto address = REL::Relocation<uintptr_t>{ REL::RelocationID(50005, 50949) }.address();
 
 			//Replace 1401D66E0 as well.
 			auto& trampoline = SKSE::GetTrampoline();
 
-			func = trampoline.write_call<5>(address + RELOCATION_OFFSET(0x66, 0x0), thunk);
+			func = trampoline.write_call<5>(address + 0x66, thunk);
 		}
 
 

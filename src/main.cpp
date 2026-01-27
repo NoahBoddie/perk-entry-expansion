@@ -67,7 +67,7 @@ void InitializeMessaging() {
             break;
 
         case MessagingInterface::kDataLoaded:
-
+            PEE::Test::Install();
             break;
         }
         })) {

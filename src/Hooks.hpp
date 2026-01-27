@@ -3,6 +3,9 @@
 //#include "SpeechCheck/Hooks.hpp"
 #include"Multishot/Hooks.hpp"
 #include"ModifyPrice/Hooks.hpp"
+#include"VendorOverride/Hooks.hpp"
+#include"ScrollCost/Hooks.hpp"
+
 
 namespace PEE
 {
@@ -12,6 +15,7 @@ namespace PEE
 
 		MULT::Install();
 		MPRC::Install();
-
+		VOVR::Install();
+		SCRC::Install();
 	}
 }
