@@ -32,6 +32,10 @@ set(headers
      "src/Multishot/Hooks.hpp"
      "src/SpeechCheck/Hooks.hpp"
      "src/ContainerItems/Hooks.hpp"
+     "src/SpeechCheck/Hooks.hpp"
+     "src/MagicApplyCombatSpell/Hooks.hpp"
+     "src/PotionApplySpell/Hooks.hpp"
+     "src/CritApplySpell/Hooks.hpp"
 
      "src/MagicApplyCombatSpell/Hooks/Hook_MagicApplyCombatSpell.h"
      "src/PotionApplySpell/Hooks/PotionApplySpell.h"

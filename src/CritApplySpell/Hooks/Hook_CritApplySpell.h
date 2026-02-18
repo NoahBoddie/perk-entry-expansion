@@ -8,13 +8,19 @@ AE ID: 44016 AE Offset: 0x40b
 
 namespace PEE {
 	struct Crit__ApplyCombatSpell {
+		DECLARE_ALLOC()
+
 		static void Patch()
 		{
 			auto& trampoline = SKSE::GetTrampoline();
 
 			REL::Relocation<std::uintptr_t> _magicApplyHook{ REL::RelocationID(42844, 44016), REL::VariantOffset(0x3a3, 0x40b, 0x3a3) }; //VR ID and offset completely unknown
 			_originalCall = trampoline.write_call<5>(_magicApplyHook.address(), &ApplyCritDMGEntry);
-			logger::info("Critical Hit Apply Hook complete...");
+		}
+
+		static void Install()
+		{
+			return Patch();
 		}
 
 		static void  ApplyCritDMGEntry(RE::BGSPerkEntry::EntryPoint ep, RE::Actor* attacker, RE::TESObjectWEAP* weapon, RE::Actor* target, float& damage) 

@@ -1,7 +1,7 @@
 #pragma once 
 #include "PerkEntries.h"
 
-namespace PEE {
+namespace PEE::MACS {
 	struct ApplyHitMagicHitSpells {
 		DECLARE_ALLOC()
 
@@ -27,7 +27,7 @@ namespace PEE {
 			auto spell = a_proj->GetProjectileRuntimeData().spell ? skyrim_cast<RE::SpellItem*>(a_proj->GetProjectileRuntimeData().spell) : nullptr;
 
 
-			RE::HandleEntryPoint(MACS::perkEntry, caster, sp_vec, MACS::perkCategory, spell, target);
+			RE::HandleEntryPoint(perkEntry, caster, sp_vec, perkCategory, spell, target);
 			if (sp_vec.empty())
 			{
 				logger::debug("Spell Vector is empty");
