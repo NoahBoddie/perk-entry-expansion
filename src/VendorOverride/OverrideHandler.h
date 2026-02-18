@@ -7,6 +7,7 @@ namespace PEE::VOVR
 {
 	struct OverrideHandler
 	{
+		//Port this to PEPE and other related stuff that could make use of it.
 		inline RE::TESObjectREFR* ObtainOwnerTarget(RE::TESForm* form)
 		{
 
@@ -39,21 +40,35 @@ namespace PEE::VOVR
 			return nullptr;
 		}
 
-		static void UpdateOverride(RE::Actor* target, RE::TESBoundObject* item, bool* keywordCheck, bool* stolenCheck, RE::TESForm* owner = nullptr)
+		static void UpdateOverride(RE::Actor* merchant, RE::InventoryEntryData* item, bool* keywordCheck, bool* stolenCheck, RE::TESForm* owner = nullptr)
 		{
 			if (!keywordCheck && !stolenCheck)
 				return;
 
 			RE::PlayerCharacter* player = GetPlayer();
 			RE::TESDataHandler* handler = GetDataHandler();
-			auto stock = target->GetVendorFaction()->vendorData.merchantContainer;
+			auto stock = merchant->GetVendorFaction()->vendorData.merchantContainer;
 
-			if (keywordCheck) {
-				*keywordCheck = true;
+			//this can't handle what happens if it's a faction that's the owner, so I'm just not gonna do it.
+			owner = nullptr;
+			if (!owner) {
+				owner = player;
 			}
 
-			if (stolenCheck) {
-				*stolenCheck = true;
+			if (keywordCheck && !*keywordCheck) {
+				float should = 0.f;
+
+				auto result = RE::HandleEntryPoint(perkEntry, player, should, perkCategory[kBarterUnrelatedItem], std::pair{merchant, stock }, std::pair{ item, owner });
+				assert(result == PEPE::RequestResult::Success);
+				*keywordCheck = should > 0;
+			}
+
+			if (stolenCheck && !*stolenCheck) {
+				float should = 0.f;
+
+				auto result = RE::HandleEntryPoint(perkEntry, player, should, perkCategory[kBarterStolenItem], std::pair{ merchant, stock }, std::pair{ item, owner });
+				assert(result == PEPE::RequestResult::Success);
+				*stolenCheck = should > 0;
 			}
 		}
 	};

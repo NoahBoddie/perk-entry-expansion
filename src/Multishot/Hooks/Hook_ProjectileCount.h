@@ -19,14 +19,14 @@ namespace PEE::MULT
 		}
 
 
-		static int8_t thunk(RE::TESObjectWEAP* weapon)
+		static uint8_t thunk(RE::TESObjectWEAP* weapon)
 		{
 			auto result = func(weapon);
 
 			if (SpreadHandler::isActive)
 			{
 				if (SpreadHandler::source && SpreadHandler::source->IsPlayerRef()) {
-					static int8_t add = 80;
+					static uint8_t add = 254;
 					result += add;
 					result = SpreadHandler::SetCount(result);
 				}

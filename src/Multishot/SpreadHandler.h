@@ -44,7 +44,7 @@ namespace PEE::MULT
 			return projIndex || IsProjCountEven();
 		}
 
-		static uint8_t SetCount(int8_t num)
+		static uint8_t SetCount(uint8_t num)
 		{
 			projIndex = 0;
 			projCount = num;
@@ -201,29 +201,152 @@ namespace PEE::MULT
 			return val;
 		}
 
-		static void AdjustAngleAfter(RE::TESObjectREFR* user, RE::TESObjectWEAP* weapon, RE::Projectile* proj)
+		static void AdjustAngleAfter(RE::TESObjectREFR* user, RE::TESObjectWEAP* weapon, RE::Projectile* proj, Vector3 angle)
 		{
-			//I think this should adjust more than angle, I think 2 modes of multi shot should be used. Angle spread
-			// and positional spread.
-			//zAngle += 90;
-			//return;
+			//This current set up sees the application
+			Quaternion mult = Quaternion::CreateFromYawPitchRoll(angle);
+
+			RE::NiPoint3 point =  proj->GetAngle();
+
+			Quaternion main = Quaternion::CreateFromYawPitchRoll(Vector3{ point.x, point.y, point.z });
+
+			Quaternion sub = mult * main;
+
+			Vector3 result = sub.ToEuler();
+
+			proj->SetAngle(RE::NiPoint3{ result.x, result.y, result.z });
+
+		}
+
+		static Vector3 ChangeAngle(float& xAngle, float& zAngle)
+		{
+
 			auto index = ((projIndex - IsProjCountEven()) / 2) + 1;
 
 			//evens are right, odds are left
 			float dir = IsIndexEven() ? 1.f : -1.f;
 
-			//float angle = NormalizeAngle(dir * index * baseSpread, 180);
-			float angle = (dir * index * baseSpread);
+			float angle = NormalizeAngle(dir * index * baseSpread, 180);
 
-			RE::NiPoint3 point = proj->GetAngle();
-			point.z += DegToRad(angle);
+			Vector3 result{xAngle, 0, zAngle};
 
-			proj->SetAngle(point);
+			zAngle = RE::deg_to_rad(angle);
+			xAngle = 0;
+			return result;
+
 		}
 
 
-
 		static void AdjustAngle(RE::TESObjectREFR* user, RE::TESObjectWEAP* weapon, float& xAngle, float& zAngle)
+		{
+			auto index = ((projIndex - IsProjCountEven()) / 2) + 1;
+
+			//evens are right, odds are left
+			float dir = IsIndexEven() ? 1.f : -1.f;
+
+			float angle = NormalizeAngle(dir * index * baseSpread, 180);
+
+
+			
+			zAngle += RE::deg_to_rad(angle);
+
+
+			if constexpr (0)
+			{
+				float tilt = 0;
+
+				//In the future, cache this.
+				if (user->IsPlayerRef())
+				{
+					auto ammo = user->GetCurrentAmmo();
+					static RE::INISettingCollection* collection = RE::INISettingCollection::GetSingleton();
+					RE::Setting* setting;
+					if (ammo->IsBolt() == true)
+					{
+						static auto bolt_tilt = collection->GetSetting("f1PBoltTiltUpAngle:Combat");
+						setting = bolt_tilt;
+					}
+					else if (RE::PlayerCamera::GetSingleton()->IsInFirstPerson() == true)
+					{
+						static auto bolt_tilt = collection->GetSetting("f1PArrowTiltUpAngle:Combat");
+						setting = bolt_tilt;
+					}
+					else
+					{
+						static auto bolt_tilt = collection->GetSetting("f3PArrowTiltUpAngle:Combat");
+						setting = bolt_tilt;
+					}
+
+					tilt = setting->GetFloat();
+				}
+
+				float tilt_90 = tilt + 90;
+
+
+
+
+				float x = RE::rad_to_deg(xAngle);
+				float z = RE::rad_to_deg(zAngle);
+
+
+				if constexpr (1)
+				{
+					float z_dir = std::abs(z) / z;
+
+					float unx = x - tilt;
+
+					//I'm actually confused what's what here.
+					float wave_func_x = angle * std::pow(std::abs(std::sin((x * pi) / 180.f)), 50);
+					//wave_func_x = angle * ((2.f / pi) * std::asin(std::abs(std::sin((1 / 180.f) * pi * x))));
+
+
+
+
+					//x = std::lerp(x, 90 - angle, (std::abs(x) - tilt) / 90);
+
+					//No additional solution for z just yet.
+					angle = std::lerp(angle, dir * 90, std::pow(unx / 90, 6));
+
+					x = std::lerp(x, wave_func_x, unx / 90);
+					//x = wave_func_x;
+					z += angle;
+				}
+				else
+				{
+					//This won't work either, due to it not starting from the top, but the left or right side. This may 
+					// be the cause of the inaccuracy.
+
+					//This is to say, z being at 90, and then x being 4 is actually the same as z being 86. Which is wrong
+					// additionally, negative values make it fire lower, off into the ether.
+					//x = (dir * 90) - angle;
+
+					//With this part, perhaps the problem could be viewed from the perspective of not being direction focused
+					//z +=  dir * 90;
+
+					//In this, 90 is supposed to be x - tilt, the up or why
+					//All of angle is remove from z because all of x is present I guess?
+
+					float unx = x - tilt;
+
+					float per = std::abs(unx) / 90;
+					float rper = 1 - per;
+
+					x = (dir * unx) - (angle * per);
+
+					z += (dir * 90 * per) + (angle * rper);
+
+				}
+
+				xAngle = RE::deg_to_rad(x);
+				//zAngle = RE::deg_to_rad(z + addZ + angle);
+				zAngle = RE::deg_to_rad(z);
+				//zAngle = RE::deg_to_rad(90 * dir + z);//test only
+			}
+
+		}
+
+
+		static void AdjustAngleOld(RE::TESObjectREFR* user, RE::TESObjectWEAP* weapon, float& xAngle, float& zAngle)
 		{
 			//All garbage.
 

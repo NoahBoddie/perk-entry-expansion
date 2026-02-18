@@ -10,27 +10,66 @@ namespace PEE::VOVR
 	{
 		struct AE
 		{
-			DECLARE_ALLOC_IF(REL::Module::IsAE())
+			inline static RE::InventoryEntryData* item = nullptr;
 
-			static void Install()
+			struct Hook1
 			{
-				//SE: NA, 1.6.640: 892B00
-				auto address = REL::Relocation<uintptr_t>{ REL::ID(50960) }.address();
 
-				auto& trampoline = SKSE::GetTrampoline();
+				DECLARE_ALLOC_IF(REL::Module::IsAE())
 
-				func = trampoline.write_call<5>(address + 0x20B, thunk);
-			}
+				static void Install()
+				{
+					//SE: NA, 1.6.640: 892B00
+					auto address = REL::Relocation<uintptr_t>{ REL::ID(50960) }.address();
+
+					auto& trampoline = SKSE::GetTrampoline();
+
+					func = trampoline.write_call<5>(address + 0x1DF, thunk);
+				}
 
 
-			static bool thunk(RE::Character* a_this, RE::TESBoundObject* item, char a3, char a4, char a5, bool ignoreKeyword)
+				static bool thunk(RE::InventoryEntryData* a_this)
+				{
+					auto result = func(a_this);
+
+					if (result) {
+						item = a_this;
+					}
+
+					return result;
+				}
+
+				inline static REL::Relocation<decltype(thunk)> func;
+			};
+
+			struct Hook2
 			{
-				OverrideHandler::UpdateOverride(a_this, item, &ignoreKeyword, nullptr);
-				return func(a_this, item, a3, a4, a5, ignoreKeyword);
-			}
+				DECLARE_ALLOC_IF(REL::Module::IsAE())
+
+				static void Install()
+				{
+					//SE: NA, 1.6.640: 892B00
+					auto address = REL::Relocation<uintptr_t>{ REL::ID(50960) }.address();
+
+					auto& trampoline = SKSE::GetTrampoline();
+
+					func = trampoline.write_call<5>(address + 0x20B, thunk);
+				}
 
 
-			inline static REL::Relocation<decltype(thunk)> func;
+				static bool thunk(RE::Character* a_this, RE::TESBoundObject* obj, char a3, char a4, char a5, bool ignoreKeyword)
+				{
+					RE::InventoryEntryData dummy{ obj, 0 };
+
+					OverrideHandler::UpdateOverride(a_this, item ? item : &dummy, &ignoreKeyword, nullptr);
+					item = nullptr;
+					return func(a_this, obj, a3, a4, a5, ignoreKeyword);
+				}
+
+
+				inline static REL::Relocation<decltype(thunk)> func;
+			};
+			
 
 		};
 
@@ -58,7 +97,8 @@ namespace PEE::VOVR
 				func = place_query;
 
 			if (REL::Module::IsAE()) {
-				AE::Install();
+				AE::Hook1::Install();
+				AE::Hook2::Install();
 			}
 		}
 
@@ -69,7 +109,7 @@ namespace PEE::VOVR
 		static bool thunk(RE::BarterSetting* args, RE::InventoryEntryData* item)
 		{
 			//OverrideHandler::UpdateOverride(args->merchant, item->object, &args->ignoreKeyword, args->target == RE::BarterSetting::kPlayer ? &args->ignoreStolen : nullptr);
-			OverrideHandler::UpdateOverride(args->merchant, item->object, &args->ignoreKeyword, nullptr);
+			OverrideHandler::UpdateOverride(args->merchant, item, &args->ignoreKeyword, nullptr);
 			return func(args, item);
 		}
 

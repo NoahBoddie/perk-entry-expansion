@@ -52,7 +52,7 @@ namespace PEE::VOVR
 		static void Impl(RE::InventoryEntryData* a_this, RE::TESForm* owner, bool& out)
 		{
 			if (RE::NiPointer<RE::TESObjectREFR> ref = nullptr; RE::TESObjectREFR::LookupByHandle(RE::BarterMenu::GetTargetRefHandle(), ref) == true) {
-				OverrideHandler::UpdateOverride(ref->As<RE::Actor>(), a_this->object, nullptr, &out, owner);
+				OverrideHandler::UpdateOverride(ref->As<RE::Actor>(), a_this, nullptr, &out, owner);
 			}
 		}
 

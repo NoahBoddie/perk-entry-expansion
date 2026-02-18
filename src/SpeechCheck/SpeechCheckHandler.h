@@ -10,9 +10,9 @@ namespace PEE::SPCK
 	//I have a macro for this but fuck it. 
 	namespace detail
 	{
-		struct Speech__Type
+		struct Speech
 		{
-			enum Type
+			enum Enum
 			{
 				VeryEasy,
 				Easy,
@@ -23,37 +23,129 @@ namespace PEE::SPCK
 			};
 		};
 	}
-	using Speech = detail::Speech__Type::Type;
+	using Speech = detail::Speech::Enum;
 
-	namespace detail
+
+	struct SpeechCheckData
 	{
-		struct CheckType__Type
-		{
-			enum Type
-			{
-				None,	//Isn't a check
-				Speech,	//Is a speech check
-				Fail,	//Is a condition to tell if one has succeeded
-				Pass	//Is an articulation check
-			};
-		};
-	}
-	using CheckType = detail::CheckType__Type::Type;
+		float level;
+		int8_t rank;
+	};
 
 
 	struct SpeechCheckHandler
 	{
-	private:
-		
+		inline static RE::StringSetting absFailText{ "sSpeechCheck_ForceFail", "Convincing them might not be possible." };
+		inline static RE::StringSetting absSuccessText{ "sSpeechCheck_ForceSucceed", "Something something guaranteed success." };
+		inline static std::string_view k_difficultyID = "SPEECH_DIFFICULTY";
 
-		static int _CheckDifficulty(RE::TESGlobal* global)
+		static constexpr uint64_t SPEECH_CHECK = static_cast<uint64_t>('SPCH') << 31 | 'CHCK';
+		static constexpr uint64_t NO_CHECK = static_cast<uint64_t>('NULL') << 31 | 'CHCK';
+
+
+		struct Forms
+		{
+			Forms(const Forms&) = delete;
+			Forms(Forms&&) = delete;
+
+			Forms()
+			{
+				difficultyList[Speech::VeryEasy] = RE::TESForm::LookupByID<RE::TESGlobal>(0xD16A3);
+				difficultyList[Speech::Easy] = RE::TESForm::LookupByID<RE::TESGlobal>(0xD16A4);
+				difficultyList[Speech::Average] = RE::TESForm::LookupByID<RE::TESGlobal>(0xD16A5);
+				difficultyList[Speech::Hard] = RE::TESForm::LookupByID<RE::TESGlobal>(0xD1953);
+				difficultyList[Speech::VeryHard] = RE::TESForm::LookupByID<RE::TESGlobal>(0xD1954);
+				//Will need the data manager
+				difficultyRank = RE::TESForm::LookupByEditorID<RE::TESGlobal>("_SpeechCheck_DifficultyRank");
+				difficultyLevel = RE::TESForm::LookupByEditorID<RE::TESGlobal>("_SpeechCheck_DifficultyLevel");
+
+				//Checks for articulation
+				articulationList = RE::TESForm::LookupByID<RE::BGSListForm>(0xF759C);
+
+				auto script = RE::SCRIPT_FUNCTION::LocateScriptCommand("GetEquipped");
+
+				getEquipped = script->conditionFunction;
+			}
+
+			RE::SCRIPT_FUNCTION::Condition_t* getEquipped = nullptr;
+			RE::TESGlobal* difficultyList[Speech::Total]{};
+
+			RE::TESGlobal* difficultyRank = nullptr;
+			RE::TESGlobal* difficultyLevel = nullptr;
+
+			RE::BGSListForm* articulationList = nullptr;
+			
+
+			bool GetArticulationEquipped()
+			{
+				double result = 0;
+				auto success = getEquipped(GetPlayer(), articulationList, nullptr, result);
+				assert(success);
+				return result > 0;
+			}
+
+		};
+
+		static void Install()
+		{
+			auto col = RE::GameSettingCollection::GetSingleton();
+
+			col->InsertSetting(absSuccessText);
+			col->InsertSetting(absFailText);
+		}
+
+
+		inline static std::recursive_mutex lock;
+		inline static std::thread::id processingThread;
+
+		static Forms* GetForms()
+		{
+			static Forms forms;
+
+			return &forms;
+		}
+		
+		static void ResetCurrentRankAndLevel(const std::pair<float, float>& ret)
+		{
+			auto forms = GetForms();
+
+			if (forms->difficultyLevel)
+				forms->difficultyLevel->value = ret.first;
+
+			if (forms->difficultyRank)
+				forms->difficultyRank->value = ret.second;
+		}
+
+
+		static std::pair<float, float> SetCurrentRankAndLevel(const SpeechCheckData& data)
+		{
+			std::pair<float, float> result{};
+
+			auto forms = GetForms();
+
+			if (forms->difficultyRank) {
+				result.first = forms->difficultyRank->value = data.rank;
+			}
+
+			if (forms->difficultyLevel) {
+				result.second = forms->difficultyLevel->value = data.level;
+			}
+
+			return result;
+		}
+
+
+
+		static int GetDifficulty(RE::TESGlobal* global)
 		{
 			if (!global)
 				return false;
 
-			for (int i = 0; i < g_difficultyList.size(); i++)
+			auto forms = GetForms();
+
+			for (int i = 0; i < Speech::Total; i++)
 			{
-				if (global == g_difficultyList[i])
+				if (global == forms->difficultyList[i])
 					return i + 1;
 			}
 
@@ -61,105 +153,117 @@ namespace PEE::SPCK
 
 			//auto result = std::find(std::begin(difficultyList), end, global);
 
-			std::string id = global->GetFormEditorID();
+			std::string_view id = global->GetFormEditorID();
 
 			if (id.size() < k_difficultyID.size())
 				return 0;
 
-			auto index = id.find(k_difficultyID);
-
-			if (index == std::string::npos)
+			
+			if (id.starts_with(k_difficultyID) == false)
 				return 0;
 
 			return -1;
 		}
 
-		using ItemData = RE::CONDITION_ITEM_DATA;
 
 
-		static CheckType _IsSpeechCheck(RE::CONDITION_ITEM_DATA& data, RE::TESGlobal*& diff)
+		static std::optional<bool> ShouldForceResult(RE::TESObjectREFR* target, RE::Actor* act_tar)
 		{
-			auto& func_data = data.functionData;
+			std::optional<bool> result = std::nullopt;
 
-			VoidCaster<RE::ActorValue> actor_value = func_data.params[0];
+			float value = 0;
 
-			if (actor_value != RE::ActorValue::kSpeech)
-				return CheckType::None;
+			RE::PlayerCharacter* player = GetPlayer();
 
-			//The below handles this now to make sure that the under check is valid as well
-			//if (auto op = data.flags.opCode; op != ItemData::OpCode::kGreaterThanOrEqualTo && op != ItemData::OpCode::kLessThan)
-			//	return CheckType::None;
+			//values below 0 count as zero.
+
+			//For these 2, I may want to do them both, so I can send a notification.
+
+			//The force fail entry points. Higher priority than force success.
+			RE::HandleEntryPoint(perkEntry, player, value, perkCategory[kOverrideSpeechCheck], target);
+
+			logger::debug("Forced result(player): {}", value != 0);
 
 
-			CheckType result = CheckType::None;
-
-			switch (data.flags.opCode)
-			{
-			case ItemData::OpCode::kGreaterThanOrEqualTo:
-				result = CheckType::Speech;
-				break;
-
-				//I will re enable this when it actually shows itself to cause a problem
-			//case ItemData::OpCode::kLessThan:
-			//	result = CheckType::Fail;
-			//	break;
-
-			default:
-				return CheckType::None;
+			if (value != 0) {
+				//result = false;
+				return value > 0;
 			}
+
+			if (act_tar) {
+				RE::HandleEntryPoint(perkEntry, act_tar, value, perkCategory[kOverrideSpeechCheck], player);//2 + out
+
+				logger::debug("Forced success(target): {}", value != 0);
+
+				if (value != 0) {
+					//result = false;
+					return value > 0;
+				}
+			}
+
+
+			return std::nullopt;
+		}
+
+
+
+
+		static bool Handle(RE::TESObjectREFR* target, const SpeechCheckData& data)
+		{
+
+			bool result = false;
+
+			//Articulation trumps all
+			if (GetForms()->GetArticulationEquipped() == true) {
+				return true;
+			}
+			
+			std::lock_guard guard{ lock };
+			
+			auto origin = SetCurrentRankAndLevel(data);
+
+			auto actor = target->As<RE::Actor>();
+			
+			if (auto force = ShouldForceResult(target, actor); force != std::nullopt) {
+				result = force.value();
+
+				if (result) {
+					RE::DebugNotification(absSuccessText);
+				}
+				else {
+					RE::DebugNotification(absFailText);
+				}
+			}
+			else {
+				auto player = GetPlayer();
+
+				float skill = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kSpeech);
 				
+				float req = data.level;
 
-			//For now no OR distinction
+				RE::HandleEntryPoint(perkEntry, player, req, perkCategory[kSpeechCheck], target);
+				if (actor) RE::HandleEntryPoint(perkEntry, actor, req, perkCategory[kSpeechCheck], player);
 
-			//Is not allowed to swap target, nor is it allowed to not be a global
-			if (data.flags.swapTarget || !data.flags.global)
-				return CheckType::None;
+				RE::HandleEntryPoint(perkEntry, player, req, perkCategory[kSpeechSkill], target);
+				if (actor) RE::HandleEntryPoint(perkEntry, actor, req, perkCategory[kSpeechSkill], player);
 
-			RE::TESGlobal* global = data.comparisonValue.g;
+				result = skill >= req;
+			}
 
-			//Choosen global must be one of the difficulty modifiers in vanilla, or one designated by users.
-			if (_CheckDifficulty(global) == 0)
-				return CheckType::None;
+			ResetCurrentRankAndLevel(origin);
 
-			diff = global;
 
 			return result;
 		}
-
-		static CheckType _IsPassCheck(RE::CONDITION_ITEM_DATA& data)
-		{
-			auto& func_data = data.functionData;
-
-			RE::TESForm* comp_form = VoidCaster<RE::TESForm*>{ func_data.params[0] };
-
-			if (!comp_form || comp_form != g_passFormList)
-				return CheckType::None;
-
-
-			if (data.flags.opCode != ItemData::OpCode::kEqualTo)
-				return CheckType::None;
-
-
-			//cant swap, mustn't be global
-			if (data.flags.swapTarget || data.flags.global)
-				return CheckType::None;
-
-			if (data.comparisonValue.f != 1.f)
-				return CheckType::None;
-
-			//No OR check. Unsure about using that for now.
-
-			return CheckType::Pass;
-		}
-
-
-		//Give this an out for global, just for ease of use
-		static CheckType _IsPersuasionCheck(RE::TESConditionItem* item, RE::TESGlobal*& diff)
+		
+		
+		static void TryAlter(RE::TESConditionItem* item)
 		{
 			using GlobalOrFloat = RE::CONDITION_ITEM_DATA::GlobalOrFloat;
 
-			CheckType type = CheckType::None;
+			using ItemData = RE::CONDITION_ITEM_DATA;
 
+			
 			auto& data = item->data;
 
 			RE::CONDITIONITEMOBJECT target_type = *data.object;
@@ -168,290 +272,94 @@ namespace PEE::SPCK
 
 			switch (target_type)
 			{
-			//If used on the player ref specifically
+				//If used on the player ref specifically
 			case RE::CONDITIONITEMOBJECT::kRef:
 				if (auto ref = data.runOnRef.get(); !ref || ref->IsPlayerRef() == false)
-					return CheckType::None;
+					return;
 				player_specific = true;
 
 
 				[[fallthrough]];
-			//If used on target
+				//If used on target
 			case RE::CONDITIONITEMOBJECT::kTarget:
 				break;
-			
+
 			default:
-				return CheckType::None;
+				return;
 			}
 
+			auto& func_data = data.functionData;
 
-			switch (*data.functionData.function)
+			switch (*func_data.function)
 			{
 			case RE::FUNCTION_DATA::FunctionID::kGetActorValue:
-				return _IsSpeechCheck(data, diff);
-			
-			case RE::FUNCTION_DATA::FunctionID::kGetEquipped:
-				if (player_specific)
-					return _IsPassCheck(data);
-
-			default:
-				return CheckType::None;
-			}
-		}
-
-		
-		//Boolean is so I can just use return + this
-		static void _ResetGlobals()
-		{
-			if (g_difficultyLevel)
-				g_difficultyLevel->value = 0;
-
-			if (g_difficultyRank)
-				g_difficultyRank->value = 0;
-
-			g_processingThreadHash = 0;
-		}
-
-		static void _SetGlobals(RE::TESGlobal* global)
-		{
-			if (g_difficultyRank)
-			{
-				g_difficultyRank->value = 0;
-
-				for (int i = 0; i < g_difficultyList.size(); i++)
+				if constexpr (1)
 				{
-					if (global == g_difficultyList[i]) {
-						g_difficultyRank->value = i + 1;
+
+					
+					if (VoidCaster<RE::ActorValue>(func_data.params[0]) != RE::ActorValue::kSpeech) {
+						return;
 					}
+
+					if (data.flags.opCode != ItemData::OpCode::kGreaterThanOrEqualTo) {
+
+					}
+					if (data.flags.swapTarget || !data.flags.global) {
+						return;
+					}
+					RE::TESGlobal* global = data.comparisonValue.g;
+
+					auto difficulty = GetDifficulty(global);
+					if (!difficulty) {
+						return;
+					}
+
+					SpeechCheckData check;
+					check.level = global->value;
+					check.rank = difficulty;
+					func_data.function = RE::FUNCTION_DATA::FunctionID::kGetNoRumors;
+					func_data.params[0] = std::bit_cast<void*>(check);
+					func_data.params[1] = reinterpret_cast<void*>(SPEECH_CHECK);
+					//Need to switch since this is being handled on the player, we need it on the dialogue target
+					data.object = RE::CONDITIONITEMOBJECT::kSelf;
+					data.flags.global = false;
+					data.flags.opCode = ItemData::OpCode::kGreaterThan;
+					data.comparisonValue.f = 0;
+
 				}
-
-				if (g_difficultyRank->value == 0)
-					g_difficultyRank->value = -1;
-			}
-
-			if (g_difficultyLevel)
-				g_difficultyLevel->value = global->value;
-
-		}
-
-		static std::optional<bool> _HandleForcedResult(RE::Actor* target, RE::Actor* subject, RE::TESForm* third_arg)
-		{
-			std::optional<bool> result = std::nullopt;
-
-			float value = 0;
-
-			//values below 0 count as zero.
-
-			//For these 2, I may want to do them both, so I can send a notification.
-
-			//The force fail entry points. Higher priority than force success.
-			RE::HandleEntryPoint(RE::PerkEntryPoint::kShouldApplyPlacedItem, target, value, k_categoryName, third_arg, subject);//2 + out
-			RE::HandleEntryPoint(RE::PerkEntryPoint::kGetShouldAttack, subject, value, k_categoryName, third_arg);//1 + out
-
-			logger::debug("Forced failure: {}", value > 0);
-
-			if (value > 0) {
-				//result = false;
-				return false;
-			}
-			value = 0;
-
-
-			//The force success entry points
-			RE::HandleEntryPoint(RE::PerkEntryPoint::kCalculateMyCriticalHitChance, target, value, k_categoryName, third_arg, subject);//2 + out
-			RE::HandleEntryPoint(RE::PerkEntryPoint::kModEnemyCriticalHitChance, subject, value, k_categoryName, third_arg, target);//2 + out
-
-			logger::debug("Forced success: {}", value > 0);
-
-
-			if (value > 0) {
-				return true;
-				//if (result == std::nullopt)
-				//	result = true;
-				//else{
-				//	RE::DebugNotification(g_forceFailString.GetCString());
-				//}
-			}
-
-			return result;
-		}
-
-
-		static float _HandleSkillValue(RE::Actor* target, RE::Actor* subject, RE::TESForm* third_arg, RE::TESGlobal* global)
-		{
-			float value = 0;
-
-			float speech_skill = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kSpeech);
-			
-
-			//max base skill check(player focus). Basically caps a persons base speech before the persuasion check. can be useful
-			// if one wishing to prevent say, 100 speech from winning all speech checks.
-			RE::HandleEntryPoint(RE::PerkEntryPoint::kModPickpocketChance, target, value, k_categoryName, third_arg, subject);//2 + out
-
-			logger::debug("init skill: {} ({})", speech_skill, value);
-
-			if (value > 0)
-				speech_skill = fmin(speech_skill, value);
-
-
-
-			//Persuasion, player check, enemy check, 
-			RE::HandleEntryPoint(RE::PerkEntryPoint::kModAttackDamage, target, speech_skill, k_categoryName, third_arg, subject);//2 + out
-			RE::HandleEntryPoint(RE::PerkEntryPoint::kModIncomingDamage, subject, speech_skill, k_categoryName, third_arg, target);//2 + out
-
-			logger::debug("speech skill: {}", speech_skill);
-
-			return speech_skill;
-		}
-
-		static float _HandleCheckValue(RE::Actor* target, RE::Actor* subject, RE::TESForm* third_arg, RE::TESGlobal* global)
-		{
-			float speech_check = global->value;
-
-			//Speech check eps. First for player, second for subject.
-			RE::HandleEntryPoint(RE::PerkEntryPoint::kModTargetDamageResistance, target, speech_check, k_categoryName, third_arg, subject);//2 + out
-			RE::HandleEntryPoint(RE::PerkEntryPoint::kModArmorRating, subject, speech_check, k_categoryName, third_arg);//1 + out
-
-			logger::debug("speech check: {}", speech_check);
-
-			return speech_check;
-		}
-
-
-	public:
-		static std::optional<bool> Handle(RE::TESConditionItem* a_this, RE::ConditionCheckParams& a2)
-		{
-			RE::TESGlobal* dif_global = nullptr;
-
-			auto check_result = _IsPersuasionCheck(a_this, dif_global);
-
-			
-			bool reverse_result = false;
-
-			switch (check_result)
-			{
-			case CheckType::None:
-				return std::nullopt;
-
-			case CheckType::Pass://We ignore amu. of articulation checks
-				return false;
-
-			case CheckType::Fail://and reverse process checks that ask for less than with 
-				reverse_result = true;
 				break;
 
-				//Speech just breaks
+			case RE::FUNCTION_DATA::FunctionID::kGetEquipped:
+				if (player_specific)
+				{
+					auto forms = GetForms();
+					{
+						auto& func_data = data.functionData;
+
+						RE::TESForm* comp_form = VoidCaster<RE::TESForm*>{ func_data.params[0] };
+
+						if (!comp_form || comp_form != forms->articulationList) {
+							return;
+						}
+
+						if (data.flags.opCode != ItemData::OpCode::kEqualTo)
+							return;
+
+						if (data.flags.swapTarget || data.flags.global)
+							return;
+
+						func_data.function = RE::FUNCTION_DATA::FunctionID::kGetNoRumors;
+						func_data.params[0] = nullptr;
+						func_data.params[1] = reinterpret_cast<void*>(NO_CHECK);
+						data.flags.global = false;
+						data.flags.opCode = ItemData::OpCode::kNotEqualTo;
+						data.comparisonValue.f = 0;
+					}
+				}
+				break;
 			}
-
-			//switch instead
-			//if (check_result != CheckType::Speech)
-			//	return  check_result == CheckType::None ? std::nullopt : std::optional{ false };
-
-
-
-
-			//Should be player. Even if it's running on player, the target should be the player, as that's what dialogue menus do. Will change if I see a reason to.
-			RE::Actor* target = a2.targetRef->As<RE::Actor>();
-
-			//Should be the guy we're talking to. Perhaps it's worth double checking via dialogue topic ref?
-			RE::Actor* subject = a2.actionRef->As<RE::Actor>();
-
-			if (!target || !target->IsPlayerRef() || !subject || !dif_global)
-				return std::nullopt;
-		
-
-			//Should it currently be processing one of these, it will wait if its the same thread however, 
-			// it will not go through this and instead perform the check as normal
-
-			std::hash<std::thread::id> hasher;
-
-			size_t thread_hash = hasher(std::this_thread::get_id());
-
-			if (g_processingThreadHash == thread_hash)
-				return std::nullopt;
-			
-			std::lock_guard<std::mutex> guard{ g_entryPointLock };
-
-			g_processingThreadHash = thread_hash;
-
-			
-
-			_SetGlobals(dif_global);
-
-			//The third arg isn't used yet, want to make an papyrus API for that. For now? Nothin.
-			// To be safe though, third arg is always the subject if null. Or maybe the player? Easier to nullify.
-			RE::TESForm* third_arg = nullptr;
-
-			if (!third_arg)
-				third_arg = subject;
-
-			
-
-			if (auto opt = _HandleForcedResult(target, subject, third_arg); opt != std::nullopt) {
-				//I don't know if the reference return fucks with the result
-				bool result = opt.value();
-				_ResetGlobals();
-				return result != reverse_result;
-			}
-
-
-
-			float speech_skill = _HandleSkillValue(target, subject, third_arg, dif_global);
-			float speech_check = _HandleCheckValue(target, subject, third_arg, dif_global);
-
-			_ResetGlobals();
-
-			bool result = speech_skill >= speech_check;
-
-			return result != reverse_result;
 		}
 
-
-		static void Init()
-		{
-			auto col = RE::GameSettingCollection::GetSingleton();
-
-			col->InsertSetting(g_forceFailString);
-		}
-	
-
-		static void Install()
-		{
-			g_difficultyList[Speech::VeryEasy] = RE::TESForm::LookupByID<RE::TESGlobal>(0xD16A3);
-			g_difficultyList[Speech::Easy] = RE::TESForm::LookupByID<RE::TESGlobal>(0xD16A4);
-			g_difficultyList[Speech::Average] = RE::TESForm::LookupByID<RE::TESGlobal>(0xD16A5);
-			g_difficultyList[Speech::Hard] = RE::TESForm::LookupByID<RE::TESGlobal>(0xD1953);
-			g_difficultyList[Speech::VeryHard] = RE::TESForm::LookupByID<RE::TESGlobal>(0xD1954);
-			//Will need the data manager
-			g_difficultyRank = RE::TESForm::LookupByEditorID<RE::TESGlobal>("_SpeechCheck_DifficultyRank");
-			g_difficultyLevel = RE::TESForm::LookupByEditorID<RE::TESGlobal>("_SpeechCheck_DifficultyLevel");
-
-			//Checks for articulation
-			g_passFormList = RE::TESForm::LookupByID<RE::BGSListForm>(0xF7593);
-		}
-
-
-	private:
-
-
-		inline static std::mutex g_entryPointLock;
-
-		inline static size_t g_processingThreadHash = 0;
-
-		inline static RE::BGSListForm* g_passFormList = nullptr;
-
-		inline static RE::TESGlobal* g_difficultyRank = nullptr;
-		inline static RE::TESGlobal* g_difficultyLevel = nullptr;
-
-		
-		inline static RE::StringSetting g_forceFailString {"sSpeechCheck_ForceFail", "Convincing them might not be possible right now."};
-
-		inline static std::vector<RE::TESGlobal*> g_difficultyList{ Speech::Total };
-
-
-		//Please fix the fucking function so it accounts for constexpr shit please, the problem is the use of string_views
-		inline static std::string_view k_difficultyID = "SPEECH_DIFFICULTY";
-		inline static std::string_view k_categoryName = "SPEECH_CHECK";
-		inline static uint8_t k_categoryChannel = 1;
 	};
+
 }

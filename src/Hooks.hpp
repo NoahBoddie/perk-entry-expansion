@@ -1,10 +1,12 @@
 #pragma once
 
-//#include "SpeechCheck/Hooks.hpp"
+#include "SpeechCheck/Hooks.hpp"
 #include"Multishot/Hooks.hpp"
 #include"ModifyPrice/Hooks.hpp"
 #include"VendorOverride/Hooks.hpp"
 #include"ScrollCost/Hooks.hpp"
+#include"MerchantWares/Hooks.hpp"
+#include"ContainerItems/Hooks.hpp"
 
 
 namespace PEE
@@ -17,5 +19,8 @@ namespace PEE
 		MPRC::Install();
 		VOVR::Install();
 		SCRC::Install();
+		WARES::Install();
+		SPCK::Install();
+		CONT::Install();
 	}
 }

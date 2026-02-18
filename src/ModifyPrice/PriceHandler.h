@@ -36,9 +36,20 @@ namespace PEE::MPRC
 
 					auto inventory = handler->GetMerchantInventory();
 
+					auto merchant = ref.get();
 					auto stock = inventory->owner;
 
-					price = 999;
+					float price_num = price;
+
+					const std::string_view& category = barterType == BarterEnum::kBuying ?
+						perkCategory[kModItemBuyPrice] : perkCategory[kModItemSellPrice];
+
+
+					auto result = RE::HandleEntryPoint(perkEntry, player, price_num, category, std::pair{ data, nullptr }, std::pair{ merchant, stock });
+
+					assert(result == PEPE::RequestResult::Success);
+
+					price = static_cast<uint32_t>(std::floor(price_num));
 
 				}
 

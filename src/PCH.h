@@ -124,8 +124,8 @@ namespace logger = SKSE::log;
 
 #include "PerkEntryPointExtenderAPI.h"
 #include "Utility.h"
-
-
+#include "PerkEntries.h"
+#include "Typedefs.h"
 
 
 namespace util {
