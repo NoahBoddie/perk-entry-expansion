@@ -3,6 +3,7 @@
 
 namespace PEE {
 	struct ApplyHitMagicHitSpells {
+		DECLARE_ALLOC()
 
 		static void Patch()
 		{
@@ -10,7 +11,11 @@ namespace PEE {
 
 			REL::Relocation<std::uintptr_t> _magicApplyHook{ REL::RelocationID(43015, 44206), REL::VariantOffset(0x216, 0x218, 0x216) };
 			_originalCall = trampoline.write_call<5>(_magicApplyHook.address(), &MagicApplyHit);
-			logger::info("Magic Apply Hook complete...");
+		}
+
+		static void Install()
+		{
+			return Patch();
 		}
 
 		static void MagicApplyHit(RE::MagicCaster* a_caster, RE::NiPoint3* a_hitPosition, RE::Projectile* a_proj, RE::TESObjectREFR* a_targ, float a_unk1, float a_unk2) {

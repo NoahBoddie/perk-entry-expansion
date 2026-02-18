@@ -1,5 +1,6 @@
-
+#include "TestField_NEB.h"
 #include "Offsets.h"
+#include "Hooks.hpp"
 using namespace SKSE;
 using namespace SKSE::log;
 using namespace SKSE::stl;
@@ -66,7 +67,7 @@ void InitializeMessaging() {
             break;
 
         case MessagingInterface::kDataLoaded:
-
+            
             break;
         }
         })) {
@@ -99,9 +100,9 @@ SKSEPluginLoad(const LoadInterface* skse) {
     const auto* plugin = PluginDeclaration::GetSingleton();
     auto version = plugin->GetVersion();
     log::info("{} {} is loading...", plugin->GetName(), version);
-    Init(skse);
+    Init(skse, false);
 
-
+    PEE::Install();
     InitializeMessaging();
     
     log::info("{} has finished loading.", plugin->GetName());

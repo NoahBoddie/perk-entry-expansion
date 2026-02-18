@@ -61,6 +61,8 @@ namespace PEE
 	//Need to move to a general use library
 	struct Allocator
 	{
+		constexpr static size_t defaultSize = 14;
+
 		static size_t GetAlloc()
 		{
 			return allocCount;
@@ -69,7 +71,7 @@ namespace PEE
 		inline static size_t allocCount = 0;
 
 
-		Allocator(size_t count = 14)
+		Allocator(size_t count = defaultSize)
 		{
 			allocCount += count;
 		}
@@ -78,6 +80,7 @@ namespace PEE
 
 #define DECLARE_ALLOC(...) inline static Allocator _alloc{ __VA_ARGS__ };
 
+#define DECLARE_ALLOC_IF(mc_con, ...) inline static Allocator _alloc{ mc_con ?  size_t{__VA_ARGS__} : Allocator::defaultSize };
 
 
 	struct ProloguePatch : Xbyak::CodeGenerator
@@ -196,6 +199,20 @@ namespace PEE
 		return func();
 	}
 
+	constexpr float pi = std::numbers::pi_v<float>;
+
+
+	constexpr float RadToDeg(float rad) noexcept
+	{
+		return (180.f / pi) * rad;
+
+	}
+
+	constexpr float DegToRad(float deg) noexcept
+	{
+		return (pi / 180.f) * deg;
+	}
+
 #ifdef NDEBUG
 
 #define PROFILE(mc_expr) mc_expr
@@ -207,4 +224,21 @@ namespace PEE
 #define PROFILE_STATEMENT(mc_stat) ProfileCall(std::function{[&]() -> auto { mc_stat; }})
 
 #endif
+
+	inline RE::PlayerCharacter* GetPlayer()
+	{
+		static RE::PlayerCharacter* player = RE::PlayerCharacter::GetSingleton();
+
+		return player;
+	}
+
+	inline RE::TESDataHandler* GetDataHandler()
+	{
+		static RE::TESDataHandler* handler = RE::TESDataHandler::GetSingleton();
+
+		if (!handler)
+			handler = RE::TESDataHandler::GetSingleton();
+
+		return handler;
+	}
 }
