@@ -21,6 +21,12 @@ namespace PEE
 		static inline constexpr RE::PerkEntryPoint perkEntry = RE::PerkEntryPoint::kApplyCombatHitSpell;
 	}
 
+	namespace CACS
+	{
+		static inline constexpr auto perkCategory = "CriticalApplySpell";
+		static inline constexpr RE::PerkEntryPoint perkEntry = RE::PerkEntryPoint::kApplyCombatHitSpell;
+	}
+
 
 	namespace MULT
 	{
