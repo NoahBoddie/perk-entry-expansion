@@ -100,7 +100,7 @@ SKSEPluginLoad(const LoadInterface* skse) {
     const auto* plugin = PluginDeclaration::GetSingleton();
     auto version = plugin->GetVersion();
     log::info("{} {} is loading...", plugin->GetName(), version);
-    Init(skse);
+    Init(skse, false);
 
     PEE::Install();
     InitializeMessaging();

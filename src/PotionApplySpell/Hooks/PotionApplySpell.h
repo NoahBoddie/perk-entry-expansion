@@ -3,13 +3,20 @@
 
 namespace PEE {
 	struct Potion__ApplySpell {
+		DECLARE_ALLOC()
+
 		static inline void Patch() {
 
 			auto& trampoline = SKSE::GetTrampoline();
 
 			REL::Relocation<std::uintptr_t> _playerUsePotion{ REL::RelocationID(39604, 40690, 0x6d7b00), REL::VariantOffset(0x15, 0x15, 0x15) };
 			_originalCall = trampoline.write_call<5>(_playerUsePotion.address(), &PlayerUsePotion);
-			logger::info("Potion Use Hook complete...");
+		}
+
+
+		static void Install()
+		{
+			return Patch();
 		}
 
 		static inline void PlayerUsePotion(RE::PlayerCharacter* a_this, RE::AlchemyItem* alch, RE::ExtraDataList* extra_list) 

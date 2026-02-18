@@ -32,6 +32,9 @@ set(headers
      "src/Multishot/Hooks.hpp"
      "src/SpeechCheck/Hooks.hpp"
      "src/ContainerItems/Hooks.hpp"
+
+     "src/MagicApplyCombatSpell/Hooks/Hook_MagicApplyCombatSpell.h"
+     "src/PotionApplySpell/Hooks/PotionApplySpell.h"
  "src/MerchantWares/Hooks/Hook_ResetMerchantChest.h" "src/PerkEntries.h" "src/RE/StringSetting.h" "src/Multishot/Hooks/Hook_Fire.h" "src/Multishot/Hooks/Hook_ArrowRelease.h" "src/Multishot/Hooks/Hook_GetPlayerBowTime.h" "src/Multishot/Hooks/Hook_RandomAngle.h" "src/Multishot/Hooks/Hook_AdjustAngle.h" "src/Multishot/SpreadHandler.h" "src/Multishot/Hooks/Hook_ProjectileCount.h" "src/TestField_NEB.h" "src/ModifyPrice/PriceHandler.h" "src/ModifyPrice/Hooks/Hook_BarterGetValue.h" "src/ModifyPrice/Hooks/Hook_GetStandardItemData.h" "src/VendorOverride/Hooks/Hook_OverrideStolenCheck.h" "src/VendorOverride/Hooks/Hook_OverrideKeywordCheck.h" "src/RE/BarterSetting.h" "src/VendorOverride/OverrideHandler.h" "src/ScrollCost/Hooks.hpp" "src/Multishot/Hooks/Hook_ArrowCost.h" "src/Multishot/Hooks/Hook_UpdateArrowUI.h" "src/ScrollCost/Hooks/Hook_ScrollCost.h" "src/SpeechCheck/Hooks/Hook_RerouteCondition.h" "src/SpeechCheck/Hooks/Hook_LoadCondition.h" "src/Typedefs.h" "src/ContainerItems/ContainerHandler.h" "src/ContainerItems/Hooks/Hook_ResetInventory.h" "src/ContainerItems/Hooks/Hook_InitInventory.h" "src/ContainerItems/Hooks/Hook_LoadInventory.h")
 
 set(sources

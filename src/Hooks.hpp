@@ -7,7 +7,8 @@
 #include"ScrollCost/Hooks.hpp"
 #include"MerchantWares/Hooks.hpp"
 #include"ContainerItems/Hooks.hpp"
-
+#include "MagicApplyCombatSpell/Hooks/Hook_MagicApplyCombatSpell.h"
+#include "PotionApplySpell/Hooks/PotionApplySpell.h"
 
 namespace PEE
 {
@@ -22,5 +23,8 @@ namespace PEE
 		WARES::Install();
 		SPCK::Install();
 		CONT::Install();
+
+		InstallHook<ApplyHitMagicHitSpells>();
+		InstallHook<Potion__ApplySpell>();
 	}
 }
