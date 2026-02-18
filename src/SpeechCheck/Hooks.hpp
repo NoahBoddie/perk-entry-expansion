@@ -1,7 +1,8 @@
 #pragma once
 
-#include "Hooks/Hook_ResetMerchantChest.h"
-#include "Hooks/Hook_TESCondition_IsTrue.h"
+#include "SpeechCheckHandler.h"
+#include "Hooks/Hook_LoadCondition.h"
+#include "Hooks/Hook_RerouteCondition.h"
 
 #pragma once
 
@@ -9,6 +10,9 @@ namespace PEE::SPCK
 {
 	inline static void Install()
 	{
+		SpeechCheckHandler::Install();
 
+		InstallHook<LoadConditionHook>();
+		InstallHook<RerouteConditionHook>();
 	}
 }

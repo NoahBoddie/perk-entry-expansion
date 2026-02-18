@@ -3,16 +3,10 @@
 namespace PEE
 {
 
-	namespace SPCK
-	{
-		static inline constexpr auto perkCategory = "SpeechCheck";
-		static inline constexpr RE::PerkEntryPoint perkEntry = RE::PerkEntryPoint::kActivate;//Temporary I need to figure it out.
-	}
-
 	namespace WARES
 	{
-		static inline constexpr auto perkCategory = "MerchantWares";
-		static inline constexpr RE::PerkEntryPoint perkEntry[2]{};//Temporary I need to figure it out.
+		inline constexpr auto perkCategory = "AddMerchantWares";
+		inline constexpr RE::PerkEntryPoint perkEntry = RE::PerkEntryPoint::kAddLeveledListOnDeath;
 	}
 
 	namespace MACS
@@ -27,4 +21,71 @@ namespace PEE
 		static inline constexpr RE::PerkEntryPoint perkEntry = RE::PerkEntryPoint::kApplyCombatHitSpell;
 	}
 
+
+	namespace MULT
+	{
+		enum EP
+		{
+			kMultishot,
+		};
+
+		inline constexpr std::string_view perkCategory[]{ "Multishot" };
+		inline constexpr RE::PerkEntryPoint perkEntry = RE::PerkEntryPoint::kModBowZoom;
+	}
+
+
+	namespace SPCK
+	{
+		enum EP
+		{
+			kSpeechCheck,
+			kSpeechSkill,
+			kOverrideSpeechCheck,
+		};
+
+		inline constexpr std::string_view perkCategory[]{ "SpeechCheck", "SpeechSkill", "OverrideSpeechCheck"};
+
+		inline constexpr RE::PerkEntryPoint perkEntry = RE::PerkEntryPoint::kModFavorPoints;
+	}
+
+	namespace VOVR
+	{
+		enum EP
+		{
+			kBarterStolenItem,
+			kBarterUnrelatedItem
+		};
+
+		inline constexpr std::string_view perkCategory[]{ "BarterStolenItem", "BarterUnrelatedItem" };
+		inline constexpr RE::PerkEntryPoint perkEntry = RE::PerkEntryPoint::kShouldApplyPlacedItem;
+	}
+	
+	namespace SCRC
+	{
+		enum EP
+		{
+			kSaveScrollChance,
+		};
+
+		inline constexpr std::string_view perkCategory = "SaveScrollChance";
+		inline constexpr RE::PerkEntryPoint perkEntry = RE::PerkEntryPoint::kCanDualCastSpell;
+	}
+
+	namespace MPRC
+	{
+		enum EP
+		{
+			kModItemBuyPrice,
+			kModItemSellPrice,
+		};
+
+		inline constexpr std::string_view perkCategory[]{ "ModItemBuyPrice", "ModifyItemSellPrice" };
+		inline constexpr RE::PerkEntryPoint perkEntry = RE::PerkEntryPoint::kModSecondaryValueWeight;
+	}
+
+	namespace CONT
+	{
+		inline constexpr std::string_view perkCategory = "AddContainerItem";
+		inline constexpr RE::PerkEntryPoint perkEntry = RE::PerkEntryPoint::kAddLeveledListOnDeath;
+	}
 }
