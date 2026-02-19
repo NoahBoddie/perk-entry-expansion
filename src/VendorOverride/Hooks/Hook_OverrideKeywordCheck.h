@@ -82,17 +82,18 @@ namespace PEE::VOVR
 			//SE: 855B60, 1.6.640: 894B70
 			auto address = REL::Relocation<uintptr_t>{ REL::RelocationID(50061, 51001) }.address();
 
-			static ProloguePatch patch{ address, 5 };
+			//static ProloguePatch patch{ address, 5 };
 
 			auto& trampoline = SKSE::GetTrampoline();
 
+			ProloguePatch patch(address);
 
 			auto call_or_jmp = IsCallOrJump(address);
 
 			auto place_query = trampoline.write_branch<5>(address, (uintptr_t)thunk);
 
 			if (call_or_jmp != OperEnum::Jump)
-				func = (uintptr_t)patch.getCode();
+				func = patch.MoveInstructions(trampoline);
 			else
 				func = place_query;
 

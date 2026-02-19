@@ -85,7 +85,7 @@ namespace PEE
 			kModItemSellPrice,
 		};
 
-		inline constexpr std::string_view perkCategory[]{ "ModItemBuyPrice", "ModifyItemSellPrice" };
+		inline constexpr std::string_view perkCategory[]{ "ModItemBuyPrice", "ModItemSellPrice" };
 		inline constexpr RE::PerkEntryPoint perkEntry = RE::PerkEntryPoint::kModSecondaryValueWeight;
 	}
 

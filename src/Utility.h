@@ -1,6 +1,7 @@
 #pragma once
 
-
+#include "Zydis/Decoder.h"
+#include "zydis/DecoderTypes.h"
 
 namespace PEE
 {
@@ -83,9 +84,9 @@ namespace PEE
 #define DECLARE_ALLOC_IF(mc_con, ...) inline static Allocator _alloc{ mc_con ?  size_t{__VA_ARGS__} : Allocator::defaultSize };
 
 
-	struct ProloguePatch : Xbyak::CodeGenerator
+	struct ProloguePatchOld : Xbyak::CodeGenerator
 	{
-		explicit ProloguePatch(uintptr_t address, uintptr_t length)
+		explicit ProloguePatchOld(uintptr_t address, uintptr_t length)
 		{
 			// Hook returns here. Execute the restored bytes and jump back to the original function.
 			for (size_t i = 0; i < length; i++)
@@ -97,7 +98,7 @@ namespace PEE
 
 		static uint8_t* GetInstructions(uintptr_t address, uintptr_t length)
 		{
-			ProloguePatch it{ address, length };
+			ProloguePatchOld it{ address, length };
 			it.ready();
 			return it.GetInstructions();
 		}
@@ -116,6 +117,79 @@ namespace PEE
 			return result;
 		}
 	};
+
+	struct ProloguePatch : protected Xbyak::CodeGenerator
+	{
+	private:
+		inline static ZydisDecoder decoder{};
+
+	public:
+		explicit ProloguePatch(uintptr_t address, const std::source_location& loc = std::source_location::current())
+		{
+			int bytes_remaining = 5;
+			size_t length = 0;
+			do
+			{
+				ZydisDecodedInstruction instr;
+
+				auto status = ZydisDecoderDecodeInstruction(&decoder, nullptr, reinterpret_cast<const void*>(address + length), 5, &instr);
+
+				if (!ZYAN_SUCCESS(status)) {
+					spdlog::log(
+						spdlog::source_loc{
+							loc.file_name(),
+							static_cast<int>(loc.line()),
+							loc.function_name() },
+							spdlog::level::critical,
+							fmt::format_string<uint32_t>{"decoder unsuccessful. status {}"},
+							static_cast<uint32_t>(status));
+
+					throw std::exception("Prologue hook failure");
+				}
+				bytes_remaining -= instr.length;
+				length += instr.length;
+			} while (bytes_remaining > 0);
+
+				
+		
+			// Hook returns here. Execute the restored bytes and jump back to the original function.
+			for (size_t i = 0; i < length; i++)
+				db(*reinterpret_cast<uint8_t*>(address + i));
+
+			jmp(ptr[rip]);
+			dq(address + length);
+		}
+
+
+
+		static uintptr_t GetInstructions(uintptr_t address, const std::source_location& loc = std::source_location::current())
+		{
+			auto& trampoline = SKSE::GetTrampoline();
+			return GetInstructions(trampoline, address, loc);
+		}
+
+		static uintptr_t GetInstructions(SKSE::Trampoline& trampoline, uintptr_t address, const std::source_location& loc = std::source_location::current())
+		{
+			ProloguePatch it{ address, loc};
+
+			return it.MoveInstructions(trampoline);
+		}
+
+
+		uintptr_t MoveInstructions(SKSE::Trampoline& trampoline)
+		{
+			ready();
+
+			auto size = getSize();
+
+			auto alloc = trampoline.allocate(size);
+			std::memcpy(alloc, getCode(), size);
+			return reinterpret_cast<uintptr_t>(alloc);
+		}
+
+
+	};
+
 	template <typename T>
 	void InstallHook()
 	{

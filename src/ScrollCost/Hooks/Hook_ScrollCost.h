@@ -11,17 +11,18 @@ namespace PEE::SCRC
 			//SE: 630F40, 1.6.640: 669090
 			auto address = REL::Relocation<uintptr_t>{ REL::RelocationID(37798, 38747) }.address();
 
-			static ProloguePatch patch{ address, 6 };
+			//static ProloguePatch patch{ address, 6 };
 
 			auto& trampoline = SKSE::GetTrampoline();
 
+			ProloguePatch patch(address);
 
 			auto call_or_jmp = IsCallOrJump(address);
 
 			auto place_query = trampoline.write_branch<5>(address, (uintptr_t)thunk);
 
 			if (call_or_jmp != OperEnum::Jump)
-				func = (uintptr_t)patch.getCode();
+				func = patch.GetInstructions(trampoline, address);
 			else
 				func = place_query;
 
@@ -33,7 +34,7 @@ namespace PEE::SCRC
 			if (auto actor = a_this->As<RE::Actor>()) {
 				std::srand(std::time(NULL));
 
-				float chance = 0;
+				float chance = 100;
 
 
 

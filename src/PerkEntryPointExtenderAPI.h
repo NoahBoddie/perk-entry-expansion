@@ -104,6 +104,25 @@ namespace PEPE
 	{
 		RE::TESBoundObject* object{};
 		RE::ExtraDataList* extraData{};
+
+
+		constexpr Item() noexcept = default;
+		constexpr Item(RE::TESBoundObject* obj) : object{ obj } {};
+		constexpr Item(RE::TESBoundObject* obj, RE::ExtraDataList* extra) : 
+			object{ obj },
+			extraData{ extra }
+		{};
+
+		Item(RE::InventoryEntryData* item)
+		{
+			if (item) {
+				object = item->object;
+				if (item->extraLists && item->extraLists->empty() == false) {
+					item->extraLists->front();
+				}
+			}
+		}
+
 	};
 
 	//Move this.

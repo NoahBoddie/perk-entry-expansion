@@ -36,7 +36,7 @@ namespace PEE::SPCK
 	struct SpeechCheckHandler
 	{
 		inline static RE::StringSetting absFailText{ "sSpeechCheck_ForceFail", "Convincing them might not be possible." };
-		inline static RE::StringSetting absSuccessText{ "sSpeechCheck_ForceSucceed", "Something something guaranteed success." };
+		inline static RE::StringSetting absSuccessText{ "sSpeechCheck_ForceSucceed", "Convincing them seems guaranteed." };
 		inline static std::string_view k_difficultyID = "SPEECH_DIFFICULTY";
 
 		static constexpr uint64_t SPEECH_CHECK = static_cast<uint64_t>('SPCH') << 31 | 'CHCK';
@@ -226,15 +226,35 @@ namespace PEE::SPCK
 			
 			if (auto force = ShouldForceResult(target, actor); force != std::nullopt) {
 				result = force.value();
+				
+				if (auto topic_manager = RE::MenuTopicManager::GetSingleton(); 
+					topic_manager && topic_manager->speaker.get().get() == target)
+				{
+					std::string text;
 
-				if (result) {
-					RE::DebugNotification(absSuccessText);
-				}
-				else {
-					RE::DebugNotification(absFailText);
+					try
+					{
+						auto npc = target->GetBaseObject()->As<RE::TESNPC>();
+
+						std::string_view pronoun = npc ? npc->GetTextForParsedSubTag("PronounObj") : "it";
+
+						if (result) {
+							text = std::vformat(std::string_view{ absSuccessText }, std::make_format_args(pronoun));
+						}
+						else {
+							text = std::vformat(std::string_view{ absFailText }, std::make_format_args(pronoun));
+						}
+					}
+					catch (std::format_error& error)
+					{
+						text = std::format("$OverrideSpeechCheck: {}", result);
+					}
+
+					RE::DebugNotification(text.c_str());
 				}
 			}
-			else {
+			else 
+			{
 				auto player = GetPlayer();
 
 				float skill = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kSpeech);
@@ -295,9 +315,25 @@ namespace PEE::SPCK
 			case RE::FUNCTION_DATA::FunctionID::kGetActorValue:
 				if constexpr (1)
 				{
+					float comp_value;
+					ItemData::OpCode op;
 
-					
 					if (VoidCaster<RE::ActorValue>(func_data.params[0]) != RE::ActorValue::kSpeech) {
+						return;
+					}
+					switch (data.flags.opCode)
+					{
+					case ItemData::OpCode::kGreaterThanOrEqualTo:
+						comp_value = 0;
+						op = ItemData::OpCode::kGreaterThan;
+						break;
+
+					case ItemData::OpCode::kLessThan:
+						op = ItemData::OpCode::kEqualTo;
+						break;
+
+					default:
+
 						return;
 					}
 
@@ -323,7 +359,7 @@ namespace PEE::SPCK
 					//Need to switch since this is being handled on the player, we need it on the dialogue target
 					data.object = RE::CONDITIONITEMOBJECT::kSelf;
 					data.flags.global = false;
-					data.flags.opCode = ItemData::OpCode::kGreaterThan;
+					data.flags.opCode = op;
 					data.comparisonValue.f = 0;
 
 				}

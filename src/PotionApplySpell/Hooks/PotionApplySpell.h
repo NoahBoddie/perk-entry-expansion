@@ -1,7 +1,7 @@
 #pragma once
 #include "PerkEntries.h"
 
-namespace PEE {
+namespace PEE::PACS {
 	struct Potion__ApplySpell {
 		DECLARE_ALLOC()
 
@@ -25,7 +25,7 @@ namespace PEE {
 
 			std::vector<RE::SpellItem*> sp_vec;
 
-			RE::HandleEntryPoint(PACS::perkEntry, a_this, sp_vec, PACS::perkCategory, alch, a_this);
+			RE::HandleEntryPoint(perkEntry, a_this, sp_vec, perkCategory, PEPE::Item{ alch, extra_list }, a_this);
 
 			if (sp_vec.empty())
 			{

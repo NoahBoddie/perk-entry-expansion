@@ -15,7 +15,8 @@
             "directxmath",
             "directxtk",
             "openvr",
-            "magic-enum"
+            "magic-enum",
+            "zydis"
           ]
         }
     },
