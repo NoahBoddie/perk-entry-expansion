@@ -16,7 +16,7 @@ namespace PEE
 	inline static void Install()
 	{
 		SKSE::AllocTrampoline(Allocator::GetAlloc());
-
+		
 		MULT::Install();
 		MPRC::Install();
 		VOVR::Install();

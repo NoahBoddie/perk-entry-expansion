@@ -74,7 +74,7 @@ namespace PEE::VOVR
 		};
 
 
-		DECLARE_ALLOC()
+		DECL_ADD_ALLOC(0x19)
 
 		static void Install()
 		{

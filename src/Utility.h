@@ -81,7 +81,8 @@ namespace PEE
 
 #define DECLARE_ALLOC(...) inline static Allocator _alloc{ __VA_ARGS__ };
 
-#define DECLARE_ALLOC_IF(mc_con, ...) inline static Allocator _alloc{ mc_con ?  size_t{__VA_ARGS__} : Allocator::defaultSize };
+#define DECLARE_ALLOC_IF(mc_con, ...) inline static Allocator _alloc{ mc_con ?  Allocator{__VA_ARGS__} : Allocator{0} };
+#define DECL_ADD_ALLOC(...) inline static Allocator _alloc{ Allocator::defaultSize __VA_OPT__(+) __VA_ARGS__ };;
 
 
 	struct ProloguePatchOld : Xbyak::CodeGenerator

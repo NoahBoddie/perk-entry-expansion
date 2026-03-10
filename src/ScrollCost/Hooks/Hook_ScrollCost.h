@@ -3,7 +3,7 @@ namespace PEE::SCRC
 	struct ScrollCostHook
 	{
 
-		DECLARE_ALLOC()
+		DECL_ADD_ALLOC(0x19)
 
 		static void Install()
 		{
