@@ -133,3 +133,12 @@ namespace util {
 }
 
 #define RELOCATION_OFFSET(SE, AE) REL::VariantOffset(SE, AE, 0).offset()
+//#define USEXMAKE
+#ifdef USEXMAKE
+namespace RE {
+    inline void DebugNotification(const char* a_fmt)
+    {
+        RE::SendHUDMessage::ShowHUDMessage(a_fmt);
+	}
+}
+#endif
