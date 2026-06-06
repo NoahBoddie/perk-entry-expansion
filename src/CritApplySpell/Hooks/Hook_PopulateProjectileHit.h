@@ -36,7 +36,7 @@ namespace PEE::CACS
 		{
 			RE::InventoryEntryData dummy{ projectile->GetProjectileRuntimeData().weaponSource, 1 };
 
-			RE::InventoryEntryData* weapon = aggressor->GetEquippedEntryData(false);
+			RE::InventoryEntryData* weapon = aggressor ? aggressor->GetEquippedEntryData(false) : nullptr;
 
 			CritWeaponHandler::SetItem(weapon && weapon->object == dummy.object ? weapon : &dummy);
 
