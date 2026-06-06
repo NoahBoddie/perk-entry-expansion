@@ -94,4 +94,9 @@ namespace PEE
 		inline constexpr std::string_view perkCategory = "AddContainerItem";
 		inline constexpr RE::PerkEntryPoint perkEntry = RE::PerkEntryPoint::kAddLeveledListOnDeath;
 	}
+
+	namespace CSPM {
+		inline constexpr std::string_view perkCategory = "CastSpeed";
+		inline constexpr RE::PerkEntryPoint perkEntry = RE::PerkEntryPoint::kModSpellCost;
+	}
 }

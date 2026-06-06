@@ -10,6 +10,7 @@
 #include "MagicApplyCombatSpell/Hooks.hpp"
 #include "PotionApplySpell/Hooks.hpp"
 #include "CritApplySpell/Hooks.hpp"
+#include "CastSpeed/Hooks.hpp"
 
 namespace PEE
 {
@@ -27,5 +28,6 @@ namespace PEE
 		CACS::Install();
 		MACS::Install();
 		PACS::Install();
+		CSPM::Install();
 	}
 }
