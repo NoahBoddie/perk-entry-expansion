@@ -37,7 +37,7 @@ namespace PEE::CSPM {
 				if (a_caster->state.get() == RE::MagicCaster::State::kUnk02) {
 					castperkfactor = PEE::CSPM::CastSpeedModify::GetEffectiveCastSpeed(a_caster, a, castperkfactor);
 					// perkfactor = std::min((a_AMC->currentSpell->GetChargeTime()) / a_deltatime, perkfactor);
-					castperkfactor = max(0.05f, castperkfactor);
+					castperkfactor = std::max(0.05f, castperkfactor);
 					updatedtime = a_delta * castperkfactor;
 				}
 			}
